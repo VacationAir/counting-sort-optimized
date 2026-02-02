@@ -4,14 +4,14 @@ import matplotlib.pyplot as plt
 import math
 
 # ---------------- CONFIG ----------------
-N = 200_000
+N = 3_000_000
 REPEATS = 3
-MAX_VALUES = [10**i for i in range(1, 10)]  # 10 → 10.000.000
+MAX_VALUES = [10**i for i in range(1, 8)]  # 10 → 10.000.000
 
 np.random.seed(42)
 
 # ---------------------------------------
-# COUNTING SORT ORIGINAL (exacto)
+# COUNTING SORT ORIGINAL 
 # ---------------------------------------
 def counting_sort_original(arr):
     max_value = 0
@@ -31,7 +31,7 @@ def counting_sort_original(arr):
     return out
 
 # ---------------------------------------
-# Tu BETTER SORTING (sin cambios)
+# BETTER SORTING 
 # ---------------------------------------
 def better_sorting_benchmarks(array):
    # Find maximum
