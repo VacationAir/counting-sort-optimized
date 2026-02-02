@@ -163,69 +163,54 @@ def better_sorting_log():
         print(f"{key:25}: {value:.4f} s")
 
 def better_sorting_benchmarks(array):
-    
-    # Encontrar máximo solo
-    MAX_VALUE = array[0]
-    for i in range(1, len(array)):
-        if array[i] > MAX_VALUE:
+
+    # Find maximum
+    MAX_VALUE = 0
+    for i in range(len(array)):
+        if MAX_VALUE < array[i]:
             MAX_VALUE = array[i]
     
-    # Crear buckets (sin cálculo innecesario)
-    bucket_size = 5
-    num_buckets = (MAX_VALUE // bucket_size) + 1
+    # Sorting
+    bucket_size = 100_000
+    num_buckets = int((MAX_VALUE // bucket_size) + 1)
     buckets = [[] for _ in range(num_buckets)]
-    
-    # Distribuir valores
+
     for value in array:
-        buckets[value // bucket_size].append(value)
-    
-    # Ordenar cada bucket con counting sort optimizado
-    for bucket in buckets:
-        if not bucket:
-            continue
-        
-        # Encontrar min y max en UNA sola pasada
-        local_min = bucket[0]
-        local_max = bucket[0]
-        
-        # Primera pasada: solo encontrar min y max
-        for i in range(1, len(bucket)):
-            val = bucket[i]
-            if val > local_max:
-                local_max = val
-            elif val < local_min:
-                local_min = val
-        
-        # Counting sort optimizado - evita conversiones a int
-        size = local_max - local_min + 1
-        count = [0] * size
-        
-        # Segunda pasada: contar
-        for val in bucket:
-            count[val - local_min] += 1
-        
-        # Tercera pasada: reconstruir
-        # Evita extend() que es costoso para elementos individuales
-        idx = 0
-        for i in range(size):
-            val = i + local_min
-            cnt = count[i]
-            for _ in range(cnt):
-                bucket[idx] = val
-                idx += 1
-    
-    # Concatenar buckets optimizado
-    result = []
-    total_len = sum(len(bucket) for bucket in buckets)
-    result = [0] * total_len  # Pre-asignar espacio
-    
-    idx = 0
-    for bucket in buckets:
-        if bucket:
-            bucket_len = len(bucket)
-            result[idx:idx + bucket_len] = bucket
-            idx += bucket_len
-    
-    return result
+        bucket_index = int(value // bucket_size)
+        buckets[bucket_index].append(value)
+
+    for array in buckets:
+        if len(array) != 0:
+            local_max = 0
+            local_min = array[0]
+            # Counting sort
+            for number in array:
+                # Find max
+                if local_max < number:
+                    local_max = number
+                if local_min > number:
+                    local_min = number
+
+            temp = [0] * (int(local_max - local_min) +1)
+            for number in array:
+                temp[int(number - local_min)] += 1
+                
+            sorted_array = []
+            for index, quantity in enumerate(temp):
+                sorted_array.extend([index + local_min] * quantity)
+
+            array[:] = sorted_array
+    # Merge buckets
+    sorted_array = []
+    for array in buckets:
+        if len(array) != 0:
+            for number in range(len(array)):
+                sorted_array.append(array[number])
+
+    os.makedirs("results", exist_ok=True)
+    filepath = os.path.join("results", "better_sorting")
+    with open(filepath, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(sorted_array)  
 
 better_sorting_log()
