@@ -50,7 +50,7 @@ def better_sorting():
     # Sorting
     bucket_size = 5
     num_buckets = int((MAX_VALUE // bucket_size) + 1)
-    buckets = [[] for _ in range(num_buckets)]
+    buckets = [np.zeros(bucket_size, dtype=np.int64) for _ in range(num_buckets)]
 
     for value in array:
         bucket_index = int(value // bucket_size)
@@ -78,11 +78,8 @@ def better_sorting():
 
             array[:] = sorted_array
     # Merge buckets
-    sorted_array = []
-    for array in buckets:
-        if len(array) != 0:
-            for number in range(len(array)):
-                sorted_array.append(array[number])
+    sorted_array = np.concatenate(buckets)
+
 
     os.makedirs("results", exist_ok=True)
     filepath = os.path.join("results", "better_sorting")
@@ -163,7 +160,6 @@ def better_sorting_log():
         print(f"{key:25}: {value:.4f} s")
 
 def better_sorting_benchmarks(array):
-
     # Find maximum
     MAX_VALUE = 0
     for i in range(len(array)):
@@ -171,46 +167,114 @@ def better_sorting_benchmarks(array):
             MAX_VALUE = array[i]
     
     # Sorting
-    bucket_size = 100_000
-    num_buckets = int((MAX_VALUE // bucket_size) + 1)
+    bucket_size = max(100_000, MAX_VALUE // len(array))  
+
+    num_buckets = 100_000
     buckets = [[] for _ in range(num_buckets)]
 
+    bucket_min = [float("inf")] * num_buckets
+    bucket_max = [float("-inf")] * num_buckets
     for value in array:
         bucket_index = int(value // bucket_size)
         buckets[bucket_index].append(value)
+        if value < bucket_min[bucket_index]:
+            bucket_min[bucket_index] = value
+        if value > bucket_max[bucket_index]:
+            bucket_max[bucket_index] = value
 
-    for array in buckets:
+    # Counting sort
+    for i, array in enumerate(buckets):
         if len(array) != 0:
-            local_max = 0
-            local_min = array[0]
-            # Counting sort
-            for number in array:
-                # Find max
-                if local_max < number:
-                    local_max = number
-                if local_min > number:
-                    local_min = number
 
-            temp = [0] * (int(local_max - local_min) +1)
+            temp = [0] * (int(bucket_max[i] - bucket_min[i]) +1)
             for number in array:
-                temp[int(number - local_min)] += 1
+                temp[int(number - bucket_min[i])] += 1
                 
-            sorted_array = []
+            total_elements = sum(temp)  
+            sorted_array = [0] * total_elements  
+            pos = 0
             for index, quantity in enumerate(temp):
-                sorted_array.extend([index + local_min] * quantity)
+                for _ in range(quantity):
+                    sorted_array[pos] = index + bucket_min[i]
+                    pos += 1
 
-            array[:] = sorted_array
-    # Merge buckets
-    sorted_array = []
-    for array in buckets:
+def better_magnitude_sorting_benchmarks(arr):
+    array = arr.tolist() if hasattr(arr, "tolist") else list(arr)
+
+    n = len(array)
+    if n <= 1:
+        return array.copy()
+
+    lo = min(array)
+    hi = max(array)
+    R = hi - lo + 1
+
+    # Choose bucket size
+    approx_buckets = int(math.sqrt(n))
+    bucket_size = max(1, R // approx_buckets)
+
+    num_buckets = (R + bucket_size - 1) // bucket_size
+    buckets = [[] for _ in range(num_buckets)]
+
+    # Distribution
+    for v in array:
+        idx = (v - lo) // bucket_size
+        buckets[idx].append(v)
+
+    # Local counting
+    out = []
+
+    for bucket in buckets:
+        if not bucket:
+            continue
+
+        bmin = min(bucket)
+        bmax = max(bucket)
+
+        counts = [0] * (bmax - bmin + 1)
+        for v in bucket:
+            counts[v - bmin] += 1
+
+        for i, c in enumerate(counts):
+            if c:
+                out.extend([i + bmin] * c)
+
+    return out
+
+def better_sorting_by_units_benchmarks(array):
+    # Find maximum
+    MAX_VALUE = 0
+    for i in range(len(array)):
+        if MAX_VALUE < array[i]:
+            MAX_VALUE = array[i]
+    
+    # Sorting
+    num_buckets = len(str(MAX_VALUE))
+    buckets = [[] for _ in range(num_buckets)]
+
+    bucket_min = [float("inf")] * num_buckets
+    bucket_max = [float("-inf")] * num_buckets
+    for value in array:
+        bucket_index = int(math.log10(value)) if value > 0 else 0
+        buckets[bucket_index].append(value)
+        if value < bucket_min[bucket_index]:
+            bucket_min[bucket_index] = value
+        if value > bucket_max[bucket_index]:
+            bucket_max[bucket_index] = value
+
+    # Counting sort
+    for i, array in enumerate(buckets):
         if len(array) != 0:
-            for number in range(len(array)):
-                sorted_array.append(array[number])
 
-    os.makedirs("results", exist_ok=True)
-    filepath = os.path.join("results", "better_sorting")
-    with open(filepath, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(sorted_array)  
-
-better_sorting_log()
+            temp = [0] * (int(bucket_max[i] - bucket_min[i]) +1)
+            for number in array:
+                temp[int(number - bucket_min[i])] += 1
+                
+            total_elements = sum(temp)  
+            sorted_array = [0] * total_elements  
+            pos = 0
+            for index, quantity in enumerate(temp):
+                for _ in range(quantity):
+                    sorted_array[pos] = index + bucket_min[i]
+                    pos += 1
+    return sorted_array
